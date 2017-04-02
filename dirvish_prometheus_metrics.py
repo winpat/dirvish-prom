@@ -24,7 +24,7 @@ class Metric:
             self.value = self.value.replace(",", "")
 
         # Prometheus uses 64-bit floats to store samples
-        self.value = float(self.value)
+        self.value = '{0:g}'.format(float(self.value))
 
         return ('# HELP {} {}.\n'
                 '# TYPE {} gauge\n'
@@ -199,9 +199,6 @@ def check_pre_post_client_scripts():
     return metrics
 
 
-
-# Post shell_commands will also have DIRVISH_STATUS set to success, warning, error, or fatal error.
-
 if __name__ == '__main__':
 
     # Default labels that will be attached to each metric
@@ -219,12 +216,12 @@ if __name__ == '__main__':
     args = parse_arguments()
 
     logfile = instance + '/log'
-    summaryfile = instance + '/summary'
-    errorfile = instance + '/error'
-
     metrics.extend(extract_rsync_metrics(logfile))
+
+    summaryfile = instance + '/summary'
     metrics.extend(extract_duration(summaryfile))
-                #[extract_dirvish_status()],
+
+    metrics.append(extract_dirvish_status())
                 #check_pre_post_scripts(summaryfile))
 
     # Add labels to all metrics
