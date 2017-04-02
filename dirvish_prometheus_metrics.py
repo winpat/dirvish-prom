@@ -20,7 +20,11 @@ class Metric:
     def __str__(self):
         ''' Template out prometheus metrics '''
 
-        self.value = float(self.value.replace(",", ""))
+        if isinstance(self.value, str):
+            self.value = self.value.replace(",", "")
+
+        # Prometheus uses 64-bit floats to store samples
+        self.value = float(self.value)
 
         return ('# HELP {} {}.\n'
                 '# TYPE {} gauge\n'
@@ -60,20 +64,20 @@ def extract_duration(summary_file):
     ''' Extract the duration of a dirvish backup '''
 
     lines = read_file(summary_file)
-    start, end = '', ''
+    start, end = datetime.now(), datetime.now()
 
     for line in lines:
         if line.startswith("Backup-begin:"):
-            match = re.match('^Backup-begin: ([\d\-: ]{19}).*$', line)
+            match = re.match('^Backup-begin: ([\d\-:\s]{19})$', line)
             start = datetime.strptime(match.group(1), '%Y-%m-%d %H:%M:%S')
 
         elif line.startswith("Backup-complete:"):
-            match = re.match('^Backup-begin: ([\d\-: ]{19}).*$', line)
+            match = re.match('^Backup-complete: ([\d\-:\s]{19})$', line)
             end = datetime.strptime(match.group(1), '%Y-%m-%d %H:%M:%S')
 
-    return Metric('dirvish_duration_seconds',
+    return [Metric('dirvish_duration_seconds',
                   'Duration of dirvish backup',
-                  (end - start).total_seconds())
+                  (end - start).total_seconds())]
 
 
 def extract_rsync_metrics(logfile):
@@ -200,8 +204,6 @@ def check_pre_post_client_scripts():
 
 if __name__ == '__main__':
 
-    print(os.getenv('DIRVISH_STATUS'))
-
     # Default labels that will be attached to each metric
     labels = {'job':    'dirvish',
               'server': os.getenv('DIRVISH_SERVER'),
@@ -220,8 +222,8 @@ if __name__ == '__main__':
     summaryfile = instance + '/summary'
     errorfile = instance + '/error'
 
-    metrics += (extract_rsync_metrics(logfile))
-                #[extract_duration(summaryfile)],
+    metrics.extend(extract_rsync_metrics(logfile))
+    metrics.extend(extract_duration(summaryfile))
                 #[extract_dirvish_status()],
                 #check_pre_post_scripts(summaryfile))
 
