@@ -11,17 +11,17 @@ from collections import namedtuple
 
 class Metric:
 
-    def __init__(name, description, value, labels={}):
+    def __init__(self, name, description, value='', labels={}):
         self.name = name
         self.description = description
         self.value = value
         self.labels = labels
 
-    def __str__():
+    def __str__(self):
         ''' Template out prometheus metrics '''
-    
-        value = double(value.replace(",", ""))
-    
+
+        self.value = float(self.value.replace(",", ""))
+
         return ('# HELP {} {}.\n'
                 '# TYPE {} gauge\n'
                 '{} {}\n').format(
@@ -43,12 +43,12 @@ def parse_arguments():
 
 def read_file(file):
     ''' Read lines of file into list '''
-    
+
     try:
         # Read logfile into memory
         with open(file, 'rt') as f:
             lines = f.readlines()
-    
+
     except FileNotFoundError:
         print('Error: Unable to open file "{}"'.format(file))
         sys.exit(1)
@@ -60,13 +60,14 @@ def extract_duration(summary_file):
     ''' Extract the duration of a dirvish backup '''
 
     lines = read_file(summary_file)
+    start, end = '', ''
 
     for line in lines:
         if line.startswith("Backup-begin:"):
             match = re.match('^Backup-begin: ([\d\-: ]{19}).*$', line)
             start = datetime.strptime(match.group(1), '%Y-%m-%d %H:%M:%S')
 
-        if line.startswith("Backup-complete:"):
+        elif line.startswith("Backup-complete:"):
             match = re.match('^Backup-begin: ([\d\-: ]{19}).*$', line)
             end = datetime.strptime(match.group(1), '%Y-%m-%d %H:%M:%S')
 
@@ -78,22 +79,22 @@ def extract_duration(summary_file):
 def extract_rsync_metrics(logfile):
     ''' Turn the output of `rsync --stats ...` into Prometheus metrics. '''
 
-    patterns = ['^Number of files: ([0-9\,]*?) .*$',
-                '^Number of created files: ([0-9\,]*?) .*$',
-                '^Number of deleted files: ([0-9\,]*?)$',
-                '^Number of regular files transferred: ([0-9\,]*?)?$',
-                '^Total file size: ([0-9\,]*?) bytes$',
-                '^Total transferred file size: ([0-9\,]*?) bytes$',
-                '^Literal data: ([0-9\,]*?) bytes$',
-                '^Matched data: ([0-9\,]*?) bytes$',
-                '^File list size: ([0-9\,]*?)$',
-                '^File list generation time: ([0-9\.]*?) seconds$',
-                '^File list transfer time: ([0-9\.]*?) seconds$',
-                '^Total bytes sent: ([0-9\,]*?)$',                
-                '^Total bytes received: ([0-9\,]*?)$']
+    patterns = ['^Number of files: ([\d\,]*?) .*$',
+                '^Number of created files: ([\d\,]*?)$',
+                '^Number of deleted files: ([\d\,]*?)$',
+                '^Number of regular files transferred: ([\d\,]*?)?$',
+                '^Total file size: ([\d\,]*?) bytes$',
+                '^Total transferred file size: ([\d\,]*?) bytes$',
+                '^Literal data: ([\d\,]*?) bytes$',
+                '^Matched data: ([\d\,]*?) bytes$',
+                '^File list size: ([\d\,]*?)$',
+                '^File list generation time: ([\d\.]*?) seconds$',
+                '^File list transfer time: ([\d\.]*?) seconds$',
+                '^Total bytes sent: ([\d\,]*?)$',
+                '^Total bytes received: ([\d\,]*?)$']
 
     metrics = [Metric('rsync_number_files_count',
-                      'Number of files',
+                      'Number of files'),
                Metric('rsync_number_created_files_count',
                       'Number of created files'),
                Metric('rsync_number_deleted_files_count',
@@ -118,24 +119,27 @@ def extract_rsync_metrics(logfile):
                       'Total bytes sent'),
                Metric('rsync_total_bytes_received',
                       'Total bytes received')]
-                      
+
     lines = read_file(logfile)
 
     # Dirvish log files can have variable lengths depending on the how many files have been
     # transferred. To make the metric parsing easier cut away everything until the stats.
-    offset = [x for index, line in enumerate(lines) if line.startswith("Number of files:")]
+    for index, line in enumerate(lines):
+        if line.startswith('Number of files:'):
+            offset = index
 
     if not offset:
         print('Error: Unable to parse logfile')
         sys.exit(1)
-        
+
     # Cut away log of transferred files
     rsync_stats = lines[offset:]
-                 
-    for pattern, metric in zip(metrics, patterns):
+
+    for i, (metric, pattern) in enumerate(zip(metrics, patterns)):
         # Extract metrics from rsync stats
-        match = re.match(pattern, rsync_stats[metric.line])
+        match = re.match(pattern, rsync_stats[i])
         metric.value = match.group(1)
+
 
     return metrics
 
@@ -143,20 +147,20 @@ def extract_rsync_metrics(logfile):
 def extract_dirvish_status():
     ''' Returns the environemnt variable DIRVISH_STATUS mapped to an integer.
 
-    0 - success 
+    0 - success
     1 - warning
     2 - error
     3 - fatal error
     '''
 
-    status = os.getenv('DIRVISH_STATUS')   
+    status = os.getenv('DIRVISH_STATUS')
     options = {'success':     0,
                'warning':     1,
                'error':       2,
                'fatal error': 3}
 
     return Metric('dirvish_status',
-                  'Dirvish status success (0), warning (1), error (2), or fatal error (3)',
+                  'Dirvish status - success (0), warning (1), error (2) or fatal error (3)',
                   options[status])
 
 
@@ -179,14 +183,14 @@ def check_pre_post_client_scripts():
         if line.startswith('pre-client failed'):
             match = re.match('^pre-client failed \((\d*)\)$', line)
             metrics.append(Metric('dirvish_pre_client_return_code',
-                                  'Return code of dirvish pre client scripts'
-                                  match.group(1))
+                                  'Return code of dirvish pre client scripts',
+                                  match.group(1)))
 
         if line.startswith('post-client failed'):
             match = re.match('^post-client failed \((\d*)\)$', line)
             metrics.append(Metric('dirvish_post_client_return_code',
-                                  'Return code of dirvish post client scripts'
-                                  match.group(1))
+                                  'Return code of dirvish post client scripts',
+                                  match.group(1)))
 
     return metrics
 
@@ -209,22 +213,21 @@ if __name__ == '__main__':
 
     # Global variable that will store prometheus metrics
     metrics = []
-    
+
     args = parse_arguments()
 
-    logfile = instance + args.logfile
-    summaryfile = instance + 'summary'
-    errorfile = instance + 'error'
-            
-    metrics += (extract_rsync_metrics(logfile),
-                [extract_duration(summaryfile)],
-                [extract_dirvish_status()],
-                check_pre_post_scripts(summaryfile))
+    logfile = instance + '/log'
+    summaryfile = instance + '/summary'
+    errorfile = instance + '/error'
+
+    metrics += (extract_rsync_metrics(logfile))
+                #[extract_duration(summaryfile)],
+                #[extract_dirvish_status()],
+                #check_pre_post_scripts(summaryfile))
 
     # Add labels to all metrics
-    metrics = [metric.labels == labels for metric in metrics]
+    for metric in metrics:
+        metric.labels = labels
 
-    print([string(metric) for metric in metrics])
-
-
-               
+    for metric in metrics:
+        print(str(metric))
