@@ -4,6 +4,7 @@
 import re
 import os
 import sys
+import requests
 import argparse
 from datetime import datetime
 from collections import namedtuple
@@ -11,11 +12,10 @@ from collections import namedtuple
 
 class Metric:
 
-    def __init__(self, name, description, value='', labels={}):
+    def __init__(self, name, description, value=0):
         self.name = name
         self.description = description
         self.value = value
-        self.labels = labels
 
     def __str__(self):
         ''' Template out prometheus metrics '''
@@ -40,8 +40,12 @@ def parse_arguments():
     ''' Parse command-line arguments '''
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-l", "--logfile", help="Name of the logfile (e.g log.gz)",
-                        action="store_true", default="log.gz")
+
+    parser.add_argument('-p', '--pushgateway', help='Pushgateway (e.g. http://pushgateway.example.com)',
+                        action='store', default='http://127.0.0.1:9091/')
+    parser.add_argument('-j', '--jobname', help='Jobname (e.g "dirvish")',
+                        action='store', default='dirvish')
+
     return parser.parse_args()
 
 
@@ -83,10 +87,10 @@ def extract_duration(summary_file):
 def extract_rsync_metrics(logfile):
     ''' Turn the output of `rsync --stats ...` into Prometheus metrics. '''
 
-    patterns = ['^Number of files: ([\d\,]*?) .*$',
-                '^Number of created files: ([\d\,]*?)$',
-                '^Number of deleted files: ([\d\,]*?)$',
-                '^Number of regular files transferred: ([\d\,]*?)?$',
+    patterns = ['^Number of files: ([\d\,]*)\s?.*?$',
+                '^Number of created files: ([\d\,]*)\s?.*?$',
+                '^Number of deleted files: ([\d\,]*)\s?.*?$',
+                '^Number of regular files transferred: ([\d\,]*)\s?.*?$',
                 '^Total file size: ([\d\,]*?) bytes$',
                 '^Total transferred file size: ([\d\,]*?) bytes$',
                 '^Literal data: ([\d\,]*?) bytes$',
@@ -154,58 +158,79 @@ def extract_dirvish_status():
     0 - success
     1 - warning
     2 - error
-    3 - fatal error
+    3 - fail
     '''
 
     status = os.getenv('DIRVISH_STATUS')
     options = {'success':     0,
                'warning':     1,
                'error':       2,
-               'fatal error': 3}
+               'fail':        3}
 
     return Metric('dirvish_status',
-                  'Dirvish status - success (0), warning (1), error (2) or fatal error (3)',
+                  'Dirvish status - success (0), warning (1), error (2) or fail (3)',
                   options[status])
 
 
-def check_pre_post_client_scripts():
-    ''' Returns the return code of dirvish pre client and post-client script
+def extract_client_scripts(summary_file):
+    '''Returns the return code of the dirvish pre-client and post-client script or 0 if no script is
+    defined.
 
     Dirvish allows to run pre-server, pre-client, post-client and post-server scripts.
 
-    Failure of the pre-server command will halt all further action. So this post-server script won't
-    run either.
+    Failure of the pre-server or post-server command will halt all further action. So this script
+    won't run either.
 
     Failure of the pre-client command will prevent the rsync from running and the post-server
     command, if any, will be run.
     '''
 
     lines = read_file(summary_file)
-    metrics = []
+
+    pre_client = Metric('dirvish_pre_client_return_code',
+                        'Return code of dirvish pre client scripts')
+    post_client = Metric('dirvish_post_client_return_code',
+                         'Return code of dirvish post client scripts')
 
     for line in lines:
         if line.startswith('pre-client failed'):
             match = re.match('^pre-client failed \((\d*)\)$', line)
-            metrics.append(Metric('dirvish_pre_client_return_code',
-                                  'Return code of dirvish pre client scripts',
-                                  match.group(1)))
+            pre_client.value = match.group(1) if match != None else 0
+
+            if pre_client.value != 0:
+                raise RuntimeError(pre_client)
 
         if line.startswith('post-client failed'):
             match = re.match('^post-client failed \((\d*)\)$', line)
-            metrics.append(Metric('dirvish_post_client_return_code',
-                                  'Return code of dirvish post client scripts',
-                                  match.group(1)))
+            post_client.value = match.group(1) if match != None else 0
 
-    return metrics
+    return [pre_client, post_client]
+
+
+def compose_pushgateway_url(host, jobname, labels):
+    ''' Returns the url to the pushgateway that group the job by labels '''
+
+    # Turn label dict into url string ("/LABEL_NAME/LABEL_VALUE"
+    label_string = '/'.join(['%s/%s' % (key, value) for (key, value) in labels.items()])
+
+    return '{}/metrics/job/{}/{}'.format(host.strip('/'), jobname, label_string)
+
+
+def push_to_pushgateway(url, metrics):
+    ''' Push metrics to the pushgateway '''
+
+    data = ''.join([str(metric) for metric in metrics]).encode('utf-8')
+    response = requests.put(url, data=data)
+    print('Pushed metrics to the pushgateway "{}" (Status code: "{}", Content:"{}")'
+          .format(url, response.status_code, response.text))
+
 
 
 if __name__ == '__main__':
 
     # Default labels that will be attached to each metric
-    labels = {'job':    'dirvish',
-              'server': os.getenv('DIRVISH_SERVER'),
-              'client': os.getenv('DIRVISH_CLIENT'),
-              'image':  os.getenv('DIRVISH_IMAGE')}
+    labels = {'server': os.getenv('DIRVISH_SERVER'),
+              'client': os.getenv('DIRVISH_CLIENT')}
 
     # Path to dirvish vault instance
     instance = '/' + os.getenv('DIRVISH_DEST').strip('/tree')
@@ -216,17 +241,22 @@ if __name__ == '__main__':
     args = parse_arguments()
 
     logfile = instance + '/log'
-    metrics.extend(extract_rsync_metrics(logfile))
+    summary_file = instance + '/summary'
 
-    summaryfile = instance + '/summary'
-    metrics.extend(extract_duration(summaryfile))
+    # Try to gather as many metrics as possible. However if for example the pre-client fails, there
+    # will be no rsync stats to parse... In this case skip the rest.
+    try:
+        metrics.append(extract_dirvish_status())
+        metrics.extend(extract_client_scripts(summary_file))
+        metrics.extend(extract_rsync_metrics(logfile))
+        metrics.extend(extract_duration(summary_file))
 
-    metrics.append(extract_dirvish_status())
-                #check_pre_post_scripts(summaryfile))
-
-    # Add labels to all metrics
-    for metric in metrics:
-        metric.labels = labels
+    except RuntimeError as metric:
+        # Add the metric that caused the exception
+        metrics.append(metric)
 
     for metric in metrics:
         print(str(metric))
+
+    url = compose_pushgateway_url(args.pushgateway, args.jobname, labels)
+    push_to_pushgateway(url, metrics)
