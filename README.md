@@ -2,6 +2,7 @@ Dirvish Prometheus Metrics
 ==========================
 [![Travis](https://img.shields.io/travis/winpat/dirvish_prometheus_metrics.svg?style=flat-square)](https://travis-ci.org/adfinis-sygroup/vault-client)
 [![License](https://img.shields.io/github/license/winpat/dirvish_prometheus_metrics.svg?style=flat-square)](LICENSE)
+
 A [Dirvish](http://dirvish.org) post exec script that extracts various [Prometheus](https://prometheus.io) metrics and pushes them to a [Pushgateway](https://github.com/prometheus/pushgateway).
 
 Install
@@ -11,7 +12,7 @@ install those through:
 ```
 apt-get install python3 python3-requests
 ```
-2. Download the [latest release](https://github.com/winpat/dirvish_prometheus_metrics).
+2. Download the [latest release](https://github.com/winpat/dirvish_prometheus_metrics/releases).
 
 Usage
 -----
