@@ -41,9 +41,11 @@ def parse_arguments():
 
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('-p', '--pushgateway', help='Pushgateway (e.g. http://pushgateway.example.com)',
+    parser.add_argument('-p', '--pushgateway',
+                        help='Pushgateway (e.g. http://pushgateway.example.com)',
                         action='store', default='http://127.0.0.1:9091/')
-    parser.add_argument('-j', '--jobname', help='Jobname (e.g "dirvish")',
+    parser.add_argument('-j', '--jobname',
+                        help='Jobname (e.g "dirvish")',
                         action='store', default='dirvish')
 
     return parser.parse_args()
@@ -65,7 +67,8 @@ def read_file(file):
 
 
 def extract_duration(summary_file):
-    ''' Extract the duration of a dirvish backup '''
+    ''' Extract the duration of a dirvish backup and the timestamp of the last 
+    completed backup '''
 
     lines = read_file(summary_file)
     start, end = datetime.now(), datetime.now()
@@ -81,7 +84,10 @@ def extract_duration(summary_file):
 
     return [Metric('dirvish_duration_seconds',
                   'Duration of dirvish backup',
-                  (end - start).total_seconds())]
+                   (end - start).total_seconds()),
+            Metric('dirvish_last_completed',
+                  'Timestamp of last completed backup',
+                   end.strftime('%s'))]
 
 
 def extract_rsync_metrics(logfile):
@@ -130,8 +136,9 @@ def extract_rsync_metrics(logfile):
 
     lines = read_file(logfile)
 
-    # Dirvish log files can have variable lengths depending on the how many files have been
-    # transferred. To make the metric parsing easier cut away everything until the stats.
+    # Dirvish log files can have variable lengths depending on the how many
+    # files have been transferred. To make the metric parsing easier cut away
+    # everything until the stats.
     for index, line in enumerate(lines):
         if line.startswith('Number of files:'):
             offset = index
@@ -173,16 +180,17 @@ def extract_dirvish_status():
 
 
 def extract_client_scripts(summary_file):
-    '''Returns the return code of the dirvish pre-client and post-client script or 0 if no script is
-    defined.
+    '''Returns the return code of the dirvish pre-client and post-client script
+    or 0 if no script is defined.
 
-    Dirvish allows to run pre-server, pre-client, post-client and post-server scripts.
+    Dirvish allows to run pre-server, pre-client, post-client and post-server
+    scripts.
 
-    Failure of the pre-server or post-server command will halt all further action. So this script
-    won't run either.
+    Failure of the pre-server or post-server command will halt all further
+    action. So this script won't run either.
 
-    Failure of the pre-client command will prevent the rsync from running and the post-server
-    command, if any, will be run.
+    Failure of the pre-client command will prevent the rsync from running and
+    the post-server command, if any, will be run.
     '''
 
     lines = read_file(summary_file)
