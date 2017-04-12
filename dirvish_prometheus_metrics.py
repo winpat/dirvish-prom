@@ -17,14 +17,24 @@ class Metric:
         self.description = description
         self.value = value
 
-    def __str__(self):
-        ''' Template out prometheus metrics '''
+    @property
+    def value(self):
+        return self.__value
 
-        if isinstance(self.value, str):
-            self.value = self.value.replace(",", "")
+    @value.setter
+    def value(self, v):
+
+        # Remove commas in string before converting to double. Rsync metrics
+        # sometimes use commas to group digits.
+        # (e.g. "File list size: 338,039")
+        if isinstance(v, str):
+            v = v.replace(",", "")
 
         # Prometheus uses 64-bit floats to store samples
-        self.value = '{0:g}'.format(float(self.value))
+        self.__value = float(v)
+
+    def __str__(self):
+        ''' Template out prometheus metrics '''
 
         return ('# HELP {} {}.\n'
                 '# TYPE {} gauge\n'
@@ -71,23 +81,23 @@ def extract_duration(summary_file):
     completed backup '''
 
     lines = read_file(summary_file)
-    start, end = datetime.now(), datetime.now()
+    begin, complete = datetime.now(), datetime.now()
 
     for line in lines:
         if line.startswith("Backup-begin:"):
             match = re.match('^Backup-begin: ([\d\-:\s]{19})$', line)
-            start = datetime.strptime(match.group(1), '%Y-%m-%d %H:%M:%S')
+            begin = datetime.strptime(match.group(1), '%Y-%m-%d %H:%M:%S')
 
         elif line.startswith("Backup-complete:"):
             match = re.match('^Backup-complete: ([\d\-:\s]{19})$', line)
-            end = datetime.strptime(match.group(1), '%Y-%m-%d %H:%M:%S')
+            complete = datetime.strptime(match.group(1), '%Y-%m-%d %H:%M:%S')
 
     return [Metric('dirvish_duration_seconds',
                   'Duration of dirvish backup',
-                   (end - start).total_seconds()),
+                   (complete - begin).total_seconds()),
             Metric('dirvish_last_completed',
                   'Timestamp of last completed backup',
-                   end.strftime('%s'))]
+                   complete.strftime('%s'))]
 
 
 def extract_rsync_metrics(logfile):
