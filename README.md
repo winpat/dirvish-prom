@@ -108,10 +108,34 @@ Alerting Rules
 Here are couple alerting rules that you can use:
 ``` promql
 ALERT DirvishPreClientScriptFailed
-  IF dirvish_post_client_return_code != 0
+  IF dirvish_pre_client_return_code != 0
+  FOR 1h
   LABELS {severity="critical"}
   ANNOTATIONS {
-	summary="Pre-client script of vault {{ $labels.client }} on server {{ $labels.server }} failed."
+	summary="Pre-client script of vault {{ $labels.client }} on server {{ $labels.server }} failed({{ $value }})."
+  }
+
+ALERT DirvishPostClientScriptFailed
+  IF dirvish_post_client_return_code != 0
+  FOR 1h
+  LABELS {severity="warning"}
+  ANNOTATIONS {
+	summary="Post-client script of vault {{ $labels.client }} on server {{ $labels.server }} failed({{ $value }})."
+  }
+
+ALERT DirvishBackupUnsuccessful
+  IF dirvish_status != 0
+  FOR 1h
+  LABELS {severity="warning"}
+  ANNOTATIONS {
+	summary="Dirvish backup of vault {{ $labels.client }} on server {{ $labels.server }} failed({{ $value }})."
+  }
+
+ALERT NoDirvishBackupInLast24h
+  IF time() - dirvish_last_completed > 3600 * 24
+  LABELS {severity="warning"}
+  ANNOTATIONS {
+	summary="Dirvish backup of vault {{ $labels.client }} on server {{ $labels.server }} has not run in 24 hours."
   }
 ```
 
