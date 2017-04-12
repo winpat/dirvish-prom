@@ -1,0 +1,31 @@
+client: pathfinder.intra.winpat.ch
+tree: /
+rsh: ssh
+Server: angmar
+Bank: /mnt/backup/dirvish/
+vault: pathfinder.intra.winpat.ch
+branch: default
+Image: 20170412_2118
+Reference: 20170412_2102
+Image-now: 2017-04-12 21:18:51
+Expire: +10 days == 2017-04-22 21:18:51
+Expire-rule: wd { 1-7 }             +10 days
+exclude:
+	/dev
+	/proc
+	/compat/linux/proc
+	/etc/mtab
+	/media
+	/mnt
+	/tmp/*
+	/sys/*
+	/var/tmp/*
+	lost+found/
+SET permissions devices numeric-ids sparse stats 
+UNSET checksum init whole-file xdev zxfer 
+
+
+ACTION: rsync -vrltH --delete --numeric-ids -S -D --stats -pgo --exclude-from=/mnt/backup/dirvish//pathfinder.intra.winpat.ch/20170412_2118/exclude --link-dest=/mnt/backup/dirvish//pathfinder.intra.winpat.ch/20170412_2102/tree pathfinder.intra.winpat.ch:/ /mnt/backup/dirvish//pathfinder.intra.winpat.ch/20170412_2118/tree
+Backup-begin: 2017-04-12 21:18:51
+Backup-complete: 2017-04-12 21:18:55
+Status: success
