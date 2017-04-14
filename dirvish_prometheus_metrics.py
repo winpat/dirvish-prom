@@ -215,9 +215,6 @@ def extract_client_scripts(summary_file):
             match = re.match('^pre-client failed \((\d*)\)$', line)
             pre_client.value = match.group(1) if match != None else 0
 
-            if pre_client.value != 0:
-                raise RuntimeError(pre_client)
-
         if line.startswith('post-client failed'):
             match = re.match('^post-client failed \((\d*)\)$', line)
             post_client.value = match.group(1) if match != None else 0
@@ -240,8 +237,7 @@ def push_to_pushgateway(url, metrics):
     data = ''.join([str(metric) for metric in metrics]).encode('utf-8')
     response = requests.put(url, data=data)
     print('Pushed metrics to the pushgateway "{}" (Status code: "{}", Content:"{}")'
-          .format(url, response.status_code, response.text))
-
+         .format(url, response.status_code, response.text))
 
 
 if __name__ == '__main__':
@@ -261,18 +257,16 @@ if __name__ == '__main__':
     logfile = instance + '/log'
     summary_file = instance + '/summary'
 
-    # Try to gather as many metrics as possible. However if for example the pre-client fails, there
-    # will be no rsync stats to parse... In this case skip the rest.
-    try:
-        metrics.append(extract_dirvish_status())
-        metrics.extend(extract_client_scripts(summary_file))
+    metrics.append(extract_dirvish_status())
+    metrics.extend(extract_client_scripts(summary_file))
+
+    # Check if dirvish pre-client script failed and if so abort the collection
+    # of further metrics
+    if not metrics[-2] != 0:
         metrics.extend(extract_rsync_metrics(logfile))
         metrics.extend(extract_duration(summary_file))
 
-    except RuntimeError as metric:
-        # Add the metric that caused the exception
-        metrics.append(metric)
-
+    # Print metrics to the summary file
     for metric in metrics:
         print(str(metric))
 
