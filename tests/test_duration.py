@@ -10,8 +10,8 @@ def test_duration():
                                        'expected_completion_timestamp'])
 
     summary_files = [
-        TestData('samples/summary_failed_post-client', 98, 1492023621),
-        TestData('samples/summary_successful', 4, 1492024735)
+        TestData('samples/summary_failed_post-client', 98, 1492023621.0),
+        TestData('samples/summary_successful', 4, 1492024735.0)
     ]
 
     for test_case in summary_files:
