@@ -6,8 +6,9 @@ python:
   - "3.6"
 
 install:
+  - "pip install --upgrade pip"
   - "pip install -r requirements.txt"
   - "pip install -r dev-requirements.txt"
 
 script:
-  - "py.test ."
+  - "py.test dirvish_prometheus_metrics.py tests/"
