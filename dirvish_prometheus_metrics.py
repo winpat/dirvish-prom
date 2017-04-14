@@ -81,7 +81,7 @@ def extract_duration(summary_file):
     completed backup '''
 
     lines = read_file(summary_file)
-    begin, complete = datetime.now(), datetime.now()
+    begin, complete = None, None
 
     for line in lines:
         if line.startswith("Backup-begin:"):
