@@ -76,6 +76,23 @@ def read_file(file):
     return lines
 
 
+def extract_summary_labels(summary_file):
+    ''' Extract `vault` and `branch` label from summary file '''
+
+    lines = read_file(summary_file)
+    labels = {}
+
+    for line in lines:
+        if line.startswith("branch:"):
+            match = re.match('^branch: (.*)$', line)
+            labels['branch'] = match.group(1)
+
+        if line.startswith("vault:"):
+            match = re.match('^vault: (.*$)', line)
+            labels['vault'] = match.group(1)
+
+    return labels
+
 def extract_duration(summary_file):
     ''' Extract the duration of a dirvish backup and the timestamp of the last 
     completed backup '''
@@ -242,10 +259,6 @@ def push_to_pushgateway(url, metrics):
 
 if __name__ == '__main__':
 
-    # Default labels that will be attached to each metric
-    labels = {'server': os.getenv('DIRVISH_SERVER'),
-              'client': os.getenv('DIRVISH_CLIENT')}
-
     # Path to dirvish vault instance
     instance = '/' + os.getenv('DIRVISH_DEST').strip('/tree')
 
@@ -256,6 +269,13 @@ if __name__ == '__main__':
 
     logfile = instance + '/log'
     summary_file = instance + '/summary'
+
+    # Default labels that will be attached to each metric
+    labels = {'server': os.getenv('DIRVISH_SERVER'),
+              'client': os.getenv('DIRVISH_CLIENT')}
+
+    # Extract additional labels from the summary file
+    labels.update(extract_summary_labels(summary_file))
 
     metrics.append(extract_dirvish_status())
     metrics.extend(extract_client_scripts(summary_file))
