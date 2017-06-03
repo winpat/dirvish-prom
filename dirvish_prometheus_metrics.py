@@ -196,15 +196,23 @@ def extract_dirvish_status():
     '''
 
     status = os.getenv('DIRVISH_STATUS')
+
     options = {'success':     0,
                'warning':     1,
                'error':       2,
                'fail':        3}
 
+    # Assume the backup failed if no environment variable is set
+    if status:
+        status = options.get(status)
+    else:
+        status = 3
+
     return Metric('dirvish_status',
                   'Dirvish status - success (0), warning (1), error (2) or fail (3)',
-                  options[status])
+                  status)
 
+    return metric
 
 def extract_client_scripts(summary_file):
     '''Returns the return code of the dirvish pre-client and post-client script
@@ -282,7 +290,7 @@ if __name__ == '__main__':
 
     # Check if dirvish pre-client script failed and if so abort the collection
     # of further metrics
-    if not metrics[-2] != 0:
+    if metrics[-2] == 0:
         metrics.extend(extract_rsync_metrics(logfile))
         metrics.extend(extract_duration(summary_file))
 
