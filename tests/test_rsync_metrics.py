@@ -5,6 +5,7 @@ from dirvish_prometheus_metrics import Metric, extract_rsync_metrics
 def test_rsync_metrics():
 
     test_logfile = 'samples/log'
+
     expected_metrics = [
         Metric('rsync_number_files_count',
                'Number of files',
@@ -49,6 +50,6 @@ def test_rsync_metrics():
    
     metrics = extract_rsync_metrics(test_logfile)
 
-    for metric, expected_metric in zip(metrics, expected_metrics):
+    for metric, expected_metric in zip(metrics.values(), expected_metrics):
         assert metric.value == expected_metric.value
 

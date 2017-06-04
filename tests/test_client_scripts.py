@@ -19,5 +19,5 @@ def test_client_scripts():
 
         metrics = extract_client_scripts(test_case.file)
 
-        assert metrics[0].value == test_case.expected_pre_client_exit_status
-        assert metrics[1].value == test_case.expected_post_client_exit_status
+        assert metrics['dirvish_pre_client_return_code'].value == test_case.expected_pre_client_exit_status
+        assert metrics['dirvish_post_client_return_code'].value == test_case.expected_post_client_exit_status

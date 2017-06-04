@@ -6,6 +6,7 @@ import os
 import sys
 import requests
 import argparse
+from pprint import pprint
 from datetime import datetime
 from collections import namedtuple
 
@@ -109,12 +110,12 @@ def extract_duration(summary_file):
             match = re.match('^Backup-complete: ([\d\-:\s]{19})$', line)
             complete = datetime.strptime(match.group(1), '%Y-%m-%d %H:%M:%S')
 
-    return [Metric('dirvish_duration_seconds',
-                  'Duration of dirvish backup',
-                   (complete - begin).total_seconds()),
-            Metric('dirvish_last_completed',
-                  'Timestamp of last completed backup',
-                   complete.strftime('%s'))]
+    return {'dirvish_duration_seconds': Metric('dirvish_duration_seconds',
+                                               'Duration of dirvish backup',
+                                               (complete - begin).total_seconds()),
+            'dirvish_last_completed': Metric('dirvish_last_completed',
+                                             'Timestamp of last completed backup',
+                                             complete.strftime('%s'))}
 
 
 def extract_rsync_metrics(logfile):
@@ -134,32 +135,32 @@ def extract_rsync_metrics(logfile):
                 '^Total bytes sent: ([\d\,]*?)$',
                 '^Total bytes received: ([\d\,]*?)$']
 
-    metrics = [Metric('rsync_number_files_count',
-                      'Number of files'),
-               Metric('rsync_number_created_files_count',
-                      'Number of created files'),
-               Metric('rsync_number_deleted_files_count',
-                      'Number of deleted files'),
-               Metric('rsync_number_transferred_files_count',
-                      'Number of transferred files'),
-               Metric('rsync_total_file_size_bytes',
-                      'Total file size'),
-               Metric('rsync_total_transferred_file_size_bytes',
-                      'Total of transferred file size'),
-               Metric('rsync_literal_data_bytes',
-                      'Total of literal data'),
-               Metric('rsync_matched_data_bytes',
-                      'Total of matched data'),
-               Metric('rsync_file_list_size',
-                      'Total of file list size'),
-               Metric('rsync_list_generation_time_seconds',
-                      'Duration of list generation'),
-               Metric('rsync_list_transfer_time_seconds',
-                      'Duration of list transfer'),
-               Metric('rsync_total_bytes_sent',
-                      'Total bytes sent'),
-               Metric('rsync_total_bytes_received',
-                      'Total bytes received')]
+    metrics = {'rsync_number_files_count': Metric('rsync_number_files_count',
+                                                  'Number of files'),
+               'rsync_number_created_files_count': Metric('rsync_number_created_files_count',
+                                                          'Number of created files'),
+               'rsync_number_deleted_files_count': Metric('rsync_number_deleted_files_count',
+                                                          'Number of deleted files'),
+               'rsync_number_transferred_files_count': Metric('rsync_number_transferred_files_count',
+                                                              'Number of transferred files'),
+               'rsync_total_file_size_bytes': Metric('rsync_total_file_size_bytes',
+                                                     'Total file size'),
+               'rsync_total_transferred_file_size_bytes': Metric('rsync_total_transferred_file_size_bytes',
+                                                                 'Total of transferred file size'),
+               'rsync_literal_data_bytes': Metric('rsync_literal_data_bytes',
+                                                  'Total of literal data'),
+               'rsync_matched_data_bytes': Metric('rsync_matched_data_bytes',
+                                                  'Total of matched data'),
+               'rsync_file_list_size': Metric('rsync_file_list_size',
+                                              'Total of file list size'),
+               'rsync_list_generation_time_seconds': Metric('rsync_list_generation_time_seconds',
+                                                            'Duration of list generation'),
+               'rsync_list_transfer_time_seconds': Metric('rsync_list_transfer_time_seconds',
+                                                          'Duration of list transfer'),
+               'rsync_total_bytes_sent': Metric('rsync_total_bytes_sent',
+                                                'Total bytes sent'),
+               'rsync_total_bytes_received': Metric('rsync_total_bytes_received',
+                                                    'Total bytes received')}
 
     lines = read_file(logfile)
 
@@ -177,7 +178,7 @@ def extract_rsync_metrics(logfile):
     # Cut away log of transferred files
     rsync_stats = lines[offset:]
 
-    for i, (metric, pattern) in enumerate(zip(metrics, patterns)):
+    for i, (metric, pattern) in enumerate(zip(metrics.values(), patterns)):
         # Extract metrics from rsync stats
         match = re.match(pattern, rsync_stats[i])
         metric.value = match.group(1)
@@ -186,7 +187,7 @@ def extract_rsync_metrics(logfile):
     return metrics
 
 
-def extract_dirvish_status():
+def extract_dirvish_status(status):
     ''' Returns the environemnt variable DIRVISH_STATUS mapped to an integer.
 
     0 - success
@@ -194,8 +195,6 @@ def extract_dirvish_status():
     2 - error
     3 - fail
     '''
-
-    status = os.getenv('DIRVISH_STATUS')
 
     options = {'success':     0,
                'warning':     1,
@@ -208,11 +207,10 @@ def extract_dirvish_status():
     else:
         status = 3
 
-    return Metric('dirvish_status',
-                  'Dirvish status - success (0), warning (1), error (2) or fail (3)',
-                  status)
+    return {'dirvish_status': Metric('dirvish_status',
+                                     'Dirvish status - success (0), warning (1), error (2) or fail (3)',
+                                     status)}
 
-    return metric
 
 def extract_client_scripts(summary_file):
     '''Returns the return code of the dirvish pre-client and post-client script
@@ -230,21 +228,21 @@ def extract_client_scripts(summary_file):
 
     lines = read_file(summary_file)
 
-    pre_client = Metric('dirvish_pre_client_return_code',
-                        'Return code of dirvish pre client scripts')
-    post_client = Metric('dirvish_post_client_return_code',
-                         'Return code of dirvish post client scripts')
+    metrics = {'dirvish_pre_client_return_code': Metric('dirvish_pre_client_return_code',
+                                                        'Return code of dirvish pre client scripts'),
+               'dirvish_post_client_return_code': Metric('dirvish_post_client_return_code',
+                                                         'Return code of dirvish post client scripts')}
 
     for line in lines:
         if line.startswith('pre-client failed'):
             match = re.match('^pre-client failed \((\d*)\)$', line)
-            pre_client.value = match.group(1) if match != None else 0
+            metrics['dirvish_pre_client_return_code'].value = match.group(1) if match != None else 0
 
         if line.startswith('post-client failed'):
             match = re.match('^post-client failed \((\d*)\)$', line)
-            post_client.value = match.group(1) if match != None else 0
+            metrics['dirvish_post_client_return_code'].value = match.group(1) if match != None else 0
 
-    return [pre_client, post_client]
+    return metrics
 
 
 def compose_pushgateway_url(host, jobname, labels):
@@ -259,19 +257,31 @@ def compose_pushgateway_url(host, jobname, labels):
 def push_to_pushgateway(url, metrics):
     ''' Push metrics to the pushgateway '''
 
-    data = ''.join([str(metric) for metric in metrics]).encode('utf-8')
+    data = ''.join([str(metric) for metric in metrics.values()]).encode('utf-8')
+
     response = requests.put(url, data=data)
+
     print('Pushed metrics to the pushgateway "{}" (Status code: "{}", Content:"{}")'
          .format(url, response.status_code, response.text))
 
 
 if __name__ == '__main__':
 
+    envvars = {
+        'DIRVISH_DEST': os.getenv('DIRVISH_DEST'),
+        'DIRVISH_SERVER': os.getenv('DIRVISH_SERVER'),
+        'DIRVISH_CLIENT': os.getenv('DIRVISH_CLIENT'),
+        'DIRVISH_STATUS': os.getenv('DIRVISH_STATUS'),
+    }
+
+    print('Printing Dirvish environment variables:')
+    pprint(envvars)
+
     # Path to dirvish vault instance
-    instance = '/' + os.getenv('DIRVISH_DEST').strip('/tree')
+    instance = '/' + envvars['DIRVISH_DEST'].strip('/tree')
 
     # Global variable that will store prometheus metrics
-    metrics = []
+    metrics = {}
 
     args = parse_arguments()
 
@@ -279,24 +289,23 @@ if __name__ == '__main__':
     summary_file = instance + '/summary'
 
     # Default labels that will be attached to each metric
-    labels = {'server': os.getenv('DIRVISH_SERVER'),
-              'client': os.getenv('DIRVISH_CLIENT')}
+    labels = {'server': envvars['DIRVISH_SERVER'],
+              'client': envvars['DIRVISH_CLIENT']}
 
     # Extract additional labels from the summary file
     labels.update(extract_summary_labels(summary_file))
 
-    metrics.append(extract_dirvish_status())
-    metrics.extend(extract_client_scripts(summary_file))
+    metrics.update(extract_dirvish_status(envvars['DIRVISH_STATUS']))
+    metrics.update(extract_client_scripts(summary_file))
 
     # Check if dirvish pre-client script failed and if so abort the collection
     # of further metrics
-    if metrics[-2] == 0:
-        metrics.extend(extract_rsync_metrics(logfile))
-        metrics.extend(extract_duration(summary_file))
+    if metrics['dirvish_status'].value == 0 or metrics['dirvish_pre_client_return_code'].value != 0:
+        metrics.update(extract_rsync_metrics(logfile))
+        metrics.update(extract_duration(summary_file))
 
     # Print metrics to the summary file
-    for metric in metrics:
-        print(str(metric))
+    pprint(metrics.values())
 
     url = compose_pushgateway_url(args.pushgateway, args.jobname, labels)
     push_to_pushgateway(url, metrics)

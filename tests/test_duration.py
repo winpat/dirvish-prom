@@ -18,5 +18,5 @@ def test_duration():
 
         metrics = extract_duration(test_case.file)
 
-        assert metrics[0].value == test_case.expected_duration_in_seconds
-        assert metrics[1].value == test_case.expected_completion_timestamp
+        assert metrics['dirvish_duration_seconds'].value == test_case.expected_duration_in_seconds
+        assert metrics['dirvish_last_completed'].value == test_case.expected_completion_timestamp
