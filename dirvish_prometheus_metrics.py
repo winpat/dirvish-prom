@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import re
-import os
-import sys
-import requests
 import argparse
-from pprint import pprint
-from datetime import datetime
+import os
+import re
+import sys
 from collections import namedtuple
+from datetime import datetime
+from pprint import pprint
+
+import requests
 
 
 class Metric:
