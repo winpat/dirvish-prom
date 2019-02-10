@@ -5,18 +5,16 @@ import argparse
 import os
 import re
 import sys
-from collections import namedtuple
 from datetime import datetime
 from pprint import pprint
 
-import requests
-
 
 class Metric:
-    def __init__(self, name, description, value=0):
+    def __init__(self, name, description, value=0, labels={}):
         self.name = name
         self.description = description
         self.value = value
+        self.labels = labels
 
     @property
     def value(self):
@@ -37,8 +35,12 @@ class Metric:
     def __str__(self):
         """ Template out prometheus metrics """
 
-        return ("# HELP {} {}.\n" "# TYPE {} gauge\n" "{} {}\n").format(
-            self.name, self.description, self.name, self.name, self.value
+        lables = ','.join(f'{k}="{v}"' for k, v in self.labels.items())
+
+        return (
+            f"# HELP {self.name} {self.description}.\n"
+            f"# TYPE {self.name} gauge\n"
+            f"{self.name}{labels} {self.value}\n"
         )
 
 
@@ -48,11 +50,10 @@ def parse_arguments():
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
-        "-p",
-        "--pushgateway",
-        help="Pushgateway (e.g. http://pushgateway.example.com)",
+        "-o",
+        "--outfile",
+        help="Path to output file",
         action="store",
-        default="http://127.0.0.1:9091/",
     )
     parser.add_argument(
         "-j",
@@ -280,27 +281,14 @@ def extract_client_scripts(summary_file):
     return metrics
 
 
-def compose_pushgateway_url(host, jobname, labels):
-    """ Returns the url to the pushgateway that group the job by labels """
+def write_to_file(path, metrics):
+    "Write metrics to file"
 
-    # Turn label dict into url string ("/LABEL_NAME/LABEL_VALUE"
-    label_string = "/".join(["%s/%s" % (key, value) for (key, value) in labels.items()])
+    data = "".join(str(m) for m in metrics.values())
 
-    return "{}/metrics/job/{}/{}".format(host.strip("/"), jobname, label_string)
+    with open(path, 'w') as f:
+        f.write(data)
 
-
-def push_to_pushgateway(url, metrics):
-    """ Push metrics to the pushgateway """
-
-    data = "".join([str(metric) for metric in metrics.values()]).encode("utf-8")
-
-    response = requests.put(url, data=data)
-
-    print(
-        'Pushed metrics to the pushgateway "{}" (Status code: "{}", Content:"{}")'.format(
-            url, response.status_code, response.text
-        )
-    )
 
 
 if __name__ == "__main__":
@@ -335,6 +323,10 @@ if __name__ == "__main__":
     metrics.update(extract_dirvish_status(envvars["DIRVISH_STATUS"]))
     metrics.update(extract_client_scripts(summary_file))
 
+    # Set labels all metrics
+    for k in metrics:
+        metrics[k].labels = labels
+
     # Check if dirvish pre-client script failed and if so abort the collection
     # of further metrics
     if (
@@ -347,5 +339,4 @@ if __name__ == "__main__":
     # Print metrics to the summary file
     pprint(metrics.values())
 
-    url = compose_pushgateway_url(args.pushgateway, args.jobname, labels)
-    push_to_pushgateway(url, metrics)
+    write_to_file(args.outfile, metrics)
