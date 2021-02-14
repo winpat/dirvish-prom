@@ -35,7 +35,7 @@ class Metric:
     def __str__(self):
         """ Template out prometheus metrics """
 
-        lables = ','.join(f'{k}="{v}"' for k, v in self.labels.items())
+        lables = ",".join(f'{k}="{v}"' for k, v in self.labels.items())
 
         return (
             f"# HELP {self.name} {self.description}.\n"
@@ -50,15 +50,12 @@ def parse_arguments():
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
-        "-o",
-        "--outfile",
-        help="Path to output file",
-        action="store",
+        "-o", "--outfile", help="Path to output file", action="store",
     )
     parser.add_argument(
         "-j",
         "--jobname",
-        help='Jobname (e.g "dirvish")',
+        help='Job name (e.g "dirvish")',
         action="store",
         default="dirvish",
     )
@@ -286,9 +283,8 @@ def write_to_file(path, metrics):
 
     data = "".join(str(m) for m in metrics.values())
 
-    with open(path, 'w') as f:
+    with open(path, "w") as f:
         f.write(data)
-
 
 
 if __name__ == "__main__":
