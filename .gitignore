@@ -1,8 +1,4 @@
-# Nix
-shell.nix
-
 # Direnv
-.envrc
 .direnv
 
 # Byte-compiled / optimized / DLL files
