@@ -1,16 +1,13 @@
-Dirvish Prometheus Metrics
-==========================
-[![Travis](https://img.shields.io/travis/winpat/dirvish_prometheus_metrics.svg?style=flat-square)](https://travis-ci.org/winpat/dirvish_prometheus_metrics)
-[![License](https://img.shields.io/github/license/winpat/dirvish_prometheus_metrics.svg?style=flat-square)](LICENSE)
+# Dirvish Prometheus Metrics
 
 A [Dirvish](http://dirvish.org) post exec script that extracts various [Prometheus](https://prometheus.io) metrics and writes them to a file.
 
-Requirements
-------------
+## Requirements
+
 You want Python version >= 3.6 to run this script.
 
-Usage
------
+## Usage
+
 1. Make sure that dirvish runs rsync with the `--stats` flag.
 ```
 stats: t
@@ -20,72 +17,72 @@ stats: t
 post-server: /usr/local/bin/dirvish_prometheus_metrics.py -o /var/www/vaultname.prom -j dirvish
 ```
 
-Exposed Metrics
----------------
+## Exposed Metrics
+
 The `dirvish_prometheus_metrics` script exposes the following metrics:
 
 ``` promql
 # HELP dirvish_status Dirvish status - success (0), warning (1), error (2) or fail (3).
 # TYPE dirvish_status gauge
-dirvish_status{'server': 'clu', 'client': '192.168.3.2', 'vault': 'freenas.intra.winpat.ch', 'branch': 'default'} 0.0
+dirvish_status{server=clu, client=192.168.3.2, vault=vault, branch=default} 0.0
 # HELP dirvish_pre_client_return_code Return code of dirvish pre client scripts.
 # TYPE dirvish_pre_client_return_code gauge
-dirvish_pre_client_return_code{'server': 'clu', 'client': '192.168.3.2', 'vault': 'freenas.intra.winpat.ch', 'branch': 'default'} 0.0
+dirvish_pre_client_return_code{server=clu, client=192.168.3.2, vault=vault, branch=default} 0.0
 # HELP dirvish_post_client_return_code Return code of dirvish post client scripts.
 # TYPE dirvish_post_client_return_code gauge
-dirvish_post_client_return_code{'server': 'clu', 'client': '192.168.3.2', 'vault': 'freenas.intra.winpat.ch', 'branch': 'default'} 0.0
+dirvish_post_client_return_code{server=clu, client=192.168.3.2, vault=vault, branch=default} 0.0
 # HELP rsync_number_files_count Number of files.
 # TYPE rsync_number_files_count gauge
-rsync_number_files_count{'server': 'clu', 'client': '192.168.3.2', 'vault': 'freenas.intra.winpat.ch', 'branch': 'default'} 378109.0
+rsync_number_files_count{server=clu, client=192.168.3.2, vault=vault, branch=default} 378109.0
 # HELP rsync_number_created_files_count Number of created files.
 # TYPE rsync_number_created_files_count gauge
-rsync_number_created_files_count{'server': 'clu', 'client': '192.168.3.2', 'vault': 'freenas.intra.winpat.ch', 'branch': 'default'} 0.0
+rsync_number_created_files_count{server=clu, client=192.168.3.2, vault=vault, branch=default} 0.0
 # HELP rsync_number_deleted_files_count Number of deleted files.
 # TYPE rsync_number_deleted_files_count gauge
-rsync_number_deleted_files_count{'server': 'clu', 'client': '192.168.3.2', 'vault': 'freenas.intra.winpat.ch', 'branch': 'default'} 0.0
+rsync_number_deleted_files_count{server=clu, client=192.168.3.2, vault=vault, branch=default} 0.0
 # HELP rsync_number_transferred_files_count Number of transferred files.
 # TYPE rsync_number_transferred_files_count gauge
-rsync_number_transferred_files_count{'server': 'clu', 'client': '192.168.3.2', 'vault': 'freenas.intra.winpat.ch', 'branch': 'default'} 530.0
+rsync_number_transferred_files_count{server=clu, client=192.168.3.2, vault=vault, branch=default} 530.0
 # HELP rsync_total_file_size_bytes Total file size.
 # TYPE rsync_total_file_size_bytes gauge
-rsync_total_file_size_bytes{'server': 'clu', 'client': '192.168.3.2', 'vault': 'freenas.intra.winpat.ch', 'branch': 'default'} 339958838087.0
+rsync_total_file_size_bytes{server=clu, client=192.168.3.2, vault=vault, branch=default} 339958838087.0
 # HELP rsync_total_transferred_file_size_bytes Total of transferred file size.
 # TYPE rsync_total_transferred_file_size_bytes gauge
-rsync_total_transferred_file_size_bytes{'server': 'clu', 'client': '192.168.3.2', 'vault': 'freenas.intra.winpat.ch', 'branch': 'default'} 99956824.0
+rsync_total_transferred_file_size_bytes{server=clu, client=192.168.3.2, vault=vault, branch=default} 99956824.0
 # HELP rsync_literal_data_bytes Total of literal data.
 # TYPE rsync_literal_data_bytes gauge
-rsync_literal_data_bytes{'server': 'clu', 'client': '192.168.3.2', 'vault': 'freenas.intra.winpat.ch', 'branch': 'default'} 3062412.0
+rsync_literal_data_bytes{server=clu, client=192.168.3.2, vault=vault, branch=default} 3062412.0
 # HELP rsync_matched_data_bytes Total of matched data.
 # TYPE rsync_matched_data_bytes gauge
-rsync_matched_data_bytes{'server': 'clu', 'client': '192.168.3.2', 'vault': 'freenas.intra.winpat.ch', 'branch': 'default'} 96894412.0
+rsync_matched_data_bytes{server=clu, client=192.168.3.2, vault=vault, branch=default} 96894412.0
 # HELP rsync_file_list_size Total of file list size.
 # TYPE rsync_file_list_size gauge
-rsync_file_list_size{'server': 'clu', 'client': '192.168.3.2', 'vault': 'freenas.intra.winpat.ch', 'branch': 'default'} 4955071.0
+rsync_file_list_size{server=clu, client=192.168.3.2, vault=vault, branch=default} 4955071.0
 # HELP rsync_list_generation_time_seconds Duration of list generation.
 # TYPE rsync_list_generation_time_seconds gauge
-rsync_list_generation_time_seconds{'server': 'clu', 'client': '192.168.3.2', 'vault': 'freenas.intra.winpat.ch', 'branch': 'default'} 0.001
+rsync_list_generation_time_seconds{server=clu, client=192.168.3.2, vault=vault, branch=default} 0.001
 # HELP rsync_list_transfer_time_seconds Duration of list transfer.
 # TYPE rsync_list_transfer_time_seconds gauge
-rsync_list_transfer_time_seconds{'server': 'clu', 'client': '192.168.3.2', 'vault': 'freenas.intra.winpat.ch', 'branch': 'default'} 0.0
+rsync_list_transfer_time_seconds{server=clu, client=192.168.3.2, vault=vault, branch=default} 0.0
 # HELP rsync_total_bytes_sent Total bytes sent.
 # TYPE rsync_total_bytes_sent gauge
-rsync_total_bytes_sent{'server': 'clu', 'client': '192.168.3.2', 'vault': 'freenas.intra.winpat.ch', 'branch': 'default'} 906544.0
+rsync_total_bytes_sent{server=clu, client=192.168.3.2, vault=vault, branch=default} 906544.0
 # HELP rsync_total_bytes_received Total bytes received.
 # TYPE rsync_total_bytes_received gauge
-rsync_total_bytes_received{'server': 'clu', 'client': '192.168.3.2', 'vault': 'freenas.intra.winpat.ch', 'branch': 'default'} 16789542.0
+rsync_total_bytes_received{server=clu, client=192.168.3.2, vault=vault, branch=default} 16789542.0
 # HELP dirvish_duration_seconds Duration of dirvish backup.
 # TYPE dirvish_duration_seconds gauge
-dirvish_duration_seconds{'server': 'clu', 'client': '192.168.3.2', 'vault': 'freenas.intra.winpat.ch', 'branch': 'default'} 9.254926
+dirvish_duration_seconds{server=clu, client=192.168.3.2, vault=vault, branch=default} 9.254926
 # HELP dirvish_last_completed Timestamp of last completed backup.
 # TYPE dirvish_last_completed gauge
-dirvish_last_completed{'server': 'clu', 'client': '192.168.3.2', 'vault': 'freenas.intra.winpat.ch', 'branch': 'default'} 1549828637.0
+dirvish_last_completed{server=clu, client=192.168.3.2, vault=vault, branch=default} 1549828637.0
 ```
 
 
+## Alerting Rules
 
-Alerting Rules
---------------
 Here are couple alerting rules that you can use:
+
 ``` promql
 ALERT DirvishPreClientScriptFailed
   IF dirvish_pre_client_return_code != 0
