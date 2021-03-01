@@ -243,7 +243,7 @@ def main():
 
     args = parse_arguments()
     out_dir = Path(args.out_directory)
-    with open(out_dir / f"dirvish_{vault}_{branch}.promql", "w+") as f:
+    with open(out_dir / f"dirvish_{vault}_{branch}.promql", "w") as f:
         for metric in metrics:
             metric.labels = labels
             print(metric)
