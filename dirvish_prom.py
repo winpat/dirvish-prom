@@ -128,8 +128,6 @@ def parse_rsync_log(lines):
     while lines and not lines[0].startswith("Number of files:"):
         lines.popleft()
 
-    # breakpoint()  # FIXME
-
     for line, metric in zip(lines, RSYNC_METRICS):
         pattern, name, desc = metric
         match = re.match(pattern, line)
@@ -204,7 +202,7 @@ def parse_arguments():
         "--out-directory",
         help="Path to the textfile collector directory",
         action="store",
-        default="/tmp/prometheus",
+        default="/var/lib/prometheus-node-exporter-text-files",
     )
     return parser.parse_args()
 
@@ -243,7 +241,7 @@ def main():
 
     args = parse_arguments()
     out_dir = Path(args.out_directory)
-    with open(out_dir / f"dirvish_{vault}_{branch}.promql", "w") as f:
+    with open(out_dir / f"dirvish_{vault}_{branch}.prom", "w") as f:
         for metric in metrics:
             metric.labels = labels
             print(metric)
